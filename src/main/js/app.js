@@ -30,14 +30,25 @@ class App extends React.Component {
                 headers: {'Accept': 'application/schema+json'}
             }).then(schema => {
                 this.schema = schema.entity;
+                this.links = employeeCollection.entity._links;
                 return employeeCollection;
             });
-        }).done(employeeCollection => {
+        }).then(employeeCollection => {
+            return employeeCollection.entity._embedded.employees.map(employee =>
+                client({
+                    method: 'GET',
+                    path: employee._links.self.href
+                })
+            );
+        }).then(employeePromises => {
+            return when.all(employeePromises);
+        }).done(employees => {
             this.setState({
-                employees: employeeCollection.entity._embedded.employees,
+                employees: employees,
                 attributes: Object.keys(this.schema.properties),
                 pageSize: pageSize,
-                links: employeeCollection.entity._links});
+                links: this.links
+            });
         });
     }
     // end::follow-2[]
